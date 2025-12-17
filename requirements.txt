@@ -6,3 +6,4 @@ textblob
 sqlalchemy
 psycopg2-binary
 python-dotenv
+stripe

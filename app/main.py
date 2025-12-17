@@ -67,6 +67,35 @@ def get_history(db: Session = Depends(get_db)):
     logs = db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(10).all()
     return logs
 
+@app.post("/api/create-checkout-session")
+def create_checkout_session():
+    """
+    创建 Stripe 支付会话
+    """
+    if not STRIPE_API_KEY:
+        raise HTTPException(status_code=400, detail="Payment system not configured (Missing STRIPE_API_KEY)")
+    
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'cny',
+                    'product_data': {
+                        'name': 'GEO System Pro (Enterprise)',
+                    },
+                    'unit_amount': 9900, # ¥99.00
+                },
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url='https://geo-system.onrender.com/?success=true',
+            cancel_url='https://geo-system.onrender.com/?canceled=true',
+        )
+        return {"url": checkout_session.url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     print("🚀 GEO System (Generative Engine Optimization) 启动中...")
     # 适配云平台端口 (Render/Heroku 会注入 PORT 环境变量)
