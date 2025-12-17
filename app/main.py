@@ -9,7 +9,11 @@ import os
 import stripe
 from fastapi.responses import Response
 
-app = FastAPI(title="GEO System API", version="1.0.0")
+app = FastAPI(title="GEO System API", version="4.1.1")
+
+@app.get("/api/version")
+def get_version():
+    return {"version": "v4.1.1", "lang": "zh-CN"}
 
 # Load Stripe Key
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
