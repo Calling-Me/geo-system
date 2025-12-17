@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GEO System | AI 时代的流量主宰</title>
-    <!-- Replace CDN with China-friendly sources (Staticfile/BootCDN) -->
-    <script src="https://cdn.staticfile.org/tailwindcss/3.4.1/script.js"></script>
-    <script src="https://cdn.staticfile.org/Chart.js/4.4.1/chart.umd.js"></script>
+    <!-- 使用 unpkg 作为更稳定的 CDN 源 (支持跨国加速) -->
+    <script src="https://unpkg.com/tailwindcss-jit-cdn"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
@@ -99,6 +99,26 @@
     <script>
         // Load history on start
         window.onload = loadHistory;
+
+        async function upgradePro() {
+            const btn = document.querySelector('button[onclick="upgradePro()"]');
+            btn.innerText = "Connecting Stripe...";
+            
+            try {
+                const res = await fetch('/api/create-checkout-session', { method: 'POST' });
+                const data = await res.json();
+                
+                if (res.ok && data.url) {
+                    window.location.href = data.url;
+                } else {
+                    alert("支付系统暂未配置 (Missing API Key)。\n请在 Render 后台添加 STRIPE_API_KEY 环境变量。");
+                }
+            } catch (e) {
+                alert("支付跳转失败，请稍后重试。");
+            } finally {
+                btn.innerText = "🚀 Upgrade Pro";
+            }
+        }
 
         async function loadHistory() {
             try {
@@ -205,7 +225,7 @@
         }
     </script>
     <footer class="w-full max-w-6xl mt-12 mb-8 text-center text-slate-600 text-sm">
-        <p>&copy; 2025 GEO System Inc. | v2.2 (CN-Edition)</p>
+        <p>&copy; 2025 GEO System Inc. | v2.2 (Global CDN Fix)</p>
     </footer>
 </body>
 </html>
