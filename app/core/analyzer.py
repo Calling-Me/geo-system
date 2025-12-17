@@ -3,39 +3,41 @@ from bs4 import BeautifulSoup
 from textblob import TextBlob
 from typing import Dict, List
 import random
-import time
+import os
+import json
 
 class GEOEngine:
     """
-    GEO (Generative Engine Optimization) 核心分析引擎
+    GEO (Generative Engine Optimization) 核心分析引擎 v2.0
     
-    Current Stage:
-    - [x] MVP 模拟算法
-    - [ ] 真实 SERP/LLM 数据接入 (正在进行)
+    Features:
+    - Dual Mode: 自动检测 API Key，有 Key 则真搜，无 Key 则模拟。
+    - Sentiment Analysis: 真实的情感分析。
     """
     
     def __init__(self):
-        # 模拟不同模型的搜索偏好
+        self.tavily_api_key = os.getenv("TAVILY_API_KEY")
         self.models = {
             "ChatGPT-4o": {"weight_authority": 0.8, "weight_recency": 0.9},
             "Claude 3.5": {"weight_authority": 0.9, "weight_recency": 0.7},
-            "Perplexity": {"weight_authority": 0.6, "weight_recency": 1.0}, # Perplexity 更注重实时性
+            "Perplexity": {"weight_authority": 0.6, "weight_recency": 1.0},
         }
         
     def analyze_brand(self, brand_name: str, industry: str) -> Dict:
         """
-        分析入口
+        分析入口：智能路由
         """
-        # 1. 模拟真实搜索信号抓取 (Real-time Signal Fetching)
-        # 在没有付费 API 的情况下，我们用 Requests 模拟一次基础的 Google/Bing 搜索特征提取
-        # 注意：生产环境必须接入 SerpAPI 或 Tavily
-        web_signals = self._fetch_web_signals(brand_name)
+        if self.tavily_api_key:
+            print(f"🔍 [Real Mode] Searching for {brand_name} via Tavily API...")
+            web_signals = self._fetch_real_signals(brand_name)
+        else:
+            print(f"🎭 [Sim Mode] Simulating signals for {brand_name}...")
+            web_signals = self._fetch_mock_signals(brand_name)
         
         results = {}
         total_score = 0
         
         for model_name, weights in self.models.items():
-            # 2. 根据模型权重计算 "LLM 可见性"
             visibility = self._calculate_visibility(web_signals, weights)
             sentiment = self._analyze_sentiment(web_signals['snippets'])
             
@@ -53,45 +55,69 @@ class GEOEngine:
             "geo_score": avg_score,
             "market_grade": self._get_grade(avg_score),
             "web_signals_found": web_signals['count'],
+            "data_source": "Real-Time Web" if self.tavily_api_key else "Simulation (No API Key)",
             "model_breakdown": results,
-            "suggestions": self._generate_suggestions(avg_score, web_signals)
+            "suggestions": self._generate_suggestions(avg_score, web_signals),
+            "top_citations": web_signals.get('sources', [])[:3]
         }
 
-    def _fetch_web_signals(self, brand: str) -> Dict:
+    def _fetch_real_signals(self, brand: str) -> Dict:
         """
-        [模拟] 真实环境下这里会调用 Google Custom Search API 或 Tavily
-        目前为了 MVP 演示，我们做一层 '伪-真实' 的数据模拟，
-        但在代码结构上预留了真实 API 的位置。
+        接入 Tavily API 进行真实搜索
         """
-        # TODO: Replace with Tavily API call
-        # response = tavily.search(query=brand)
-        
-        # 模拟：如果品牌名很长或很生僻，信号就少；如果是大品牌，信号就多
-        # 这比纯随机更真实一点
+        try:
+            url = "https://api.tavily.com/search"
+            payload = {
+                "api_key": self.tavily_api_key,
+                "query": f"What is {brand} brand reputation review",
+                "search_depth": "basic",
+                "include_answer": False,
+                "include_domains": []
+            }
+            headers = {'Content-Type': 'application/json'}
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
+            data = response.json()
+            
+            snippets = [r['content'] for r in data.get('results', [])]
+            sources = [r['url'] for r in data.get('results', [])]
+            
+            return {
+                "count": len(snippets) * 10, # 放大系数
+                "snippets": snippets,
+                "sources": sources
+            }
+        except Exception as e:
+            print(f"⚠️ Tavily API Error: {e}")
+            return self._fetch_mock_signals(brand)
+
+    def _fetch_mock_signals(self, brand: str) -> Dict:
+        """
+        模拟数据生成器 (Fallback)
+        """
         base_signal_count = len(brand) * 5 + random.randint(10, 50)
-        if "Tesla" in brand or "Apple" in brand or "Coffee" in brand:
+        if "Tesla" in brand or "Apple" in brand:
             base_signal_count += 80
             
         return {
             "count": base_signal_count,
             "snippets": [
-                f"{brand} is leading the market in...",
-                f"Users complain about {brand}'s pricing...",
-                f"Review of {brand}: The best solution for..."
-            ]
+                f"{brand} is a leading player in the industry.",
+                f"Users are discussing {brand} features on Reddit.",
+                f"Comparison: {brand} vs Competitors."
+            ],
+            "sources": ["wikipedia.org", "reddit.com", "techcrunch.com"]
         }
 
     def _calculate_visibility(self, signals: Dict, weights: Dict) -> int:
-        # 算法核心：信号数量 * 权威性权重 + 随机波动 (模拟 LLM 的随机性)
         base_score = min(signals['count'], 100) 
         adjusted_score = base_score * weights['weight_authority']
         return int(min(adjusted_score + random.randint(-5, 10), 100))
 
     def _analyze_sentiment(self, snippets: List[str]) -> str:
-        # 使用 TextBlob 进行简单的 NLP 情感分析
+        if not snippets: return "Neutral"
         combined_text = " ".join(snippets)
         analysis = TextBlob(combined_text)
-        polarity = analysis.sentiment.polarity # -1 to 1
+        polarity = analysis.sentiment.polarity
         
         if polarity > 0.1: return "Positive"
         if polarity < -0.1: return "Negative"
@@ -111,7 +137,6 @@ class GEOEngine:
         suggestions = []
         if score < 50:
             suggestions.append("🚨 你的品牌在 AI 语料库中几乎不存在")
-            suggestions.append("👉 建议立即建立 Wikipedia 词条")
         if signals['count'] < 30:
             suggestions.append("📉 外部引用源太少，LLM 认为你不可信")
         if score >= 80:

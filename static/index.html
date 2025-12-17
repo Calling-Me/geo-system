@@ -69,16 +69,60 @@
                 </ul>
             </div>
         </div>
+
+        <!-- History Section -->
+        <div class="mt-12">
+            <h2 class="text-2xl font-bold text-white mb-6">🔍 最近审计记录 (Live History)</h2>
+            <div class="glass rounded-xl overflow-hidden">
+                <table class="w-full text-left text-slate-300">
+                    <thead class="bg-slate-800 text-slate-400 uppercase text-sm">
+                        <tr>
+                            <th class="px-6 py-4">品牌</th>
+                            <th class="px-6 py-4">得分</th>
+                            <th class="px-6 py-4">时间</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable" class="divide-y divide-slate-700">
+                        <!-- History rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </main>
 
     <script>
+        // Load history on start
+        window.onload = loadHistory;
+
+        async function loadHistory() {
+            try {
+                const res = await fetch('/api/history');
+                const logs = await res.json();
+                const tbody = document.getElementById('historyTable');
+                tbody.innerHTML = logs.map(log => `
+                    <tr class="hover:bg-slate-800/50 transition">
+                        <td class="px-6 py-4 font-medium text-white">${log.brand_name}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 rounded text-xs font-bold ${log.geo_score >= 80 ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}">
+                                ${log.geo_score}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-slate-500 text-sm">${new Date(log.created_at).toLocaleString()}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error("Failed to load history", e);
+            }
+        }
+
         async function runAudit() {
             const brand = document.getElementById('brandInput').value;
             if (!brand) return alert("请输入品牌名称！");
 
             // UI Loading state
             const btn = document.querySelector('button');
-            btn.innerText = "分析中...";
+            const originalText = btn.innerText;
+            btn.innerText = "🚀 AI 正在全网扫描...";
             btn.disabled = true;
 
             try {
@@ -86,11 +130,12 @@
                 const data = await response.json();
                 
                 renderReport(data);
+                loadHistory(); // Refresh history
             } catch (e) {
                 alert("系统连接失败，请确保后端已启动。");
                 console.error(e);
             } finally {
-                btn.innerText = "开始审计";
+                btn.innerText = originalText;
                 btn.disabled = false;
             }
         }

@@ -59,6 +59,14 @@ def analyze_brand(brand: str, industry: str = "general", db: Session = Depends(g
 # 挂载静态文件 (前端 Dashboard)
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
+@app.get("/api/history")
+def get_history(db: Session = Depends(get_db)):
+    """
+    获取最近的审计历史
+    """
+    logs = db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(10).all()
+    return logs
+
 if __name__ == "__main__":
     print("🚀 GEO System (Generative Engine Optimization) 启动中...")
     # 适配云平台端口 (Render/Heroku 会注入 PORT 环境变量)
