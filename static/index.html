@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GEO System | AI Brand Audit v4.0</title>
+    <title>GEO 系统 | AI 品牌审计 v4.1 (CN)</title>
     <!-- 使用 Chart.js (Staticfile CDN for China) -->
     <script src="https://cdn.staticfile.org/Chart.js/3.9.1/chart.min.js"></script>
     <style>
@@ -271,22 +271,22 @@
             <div class="header-controls">
                 <div id="systemStatus" class="status-badge">
                     <span class="status-dot sim"></span>
-                    <span>Mode: Simulation</span>
+                    <span>模式: 模拟演示</span>
                 </div>
                 <button onclick="upgradePro()" class="btn btn-pro">
-                    <span>⚡ Upgrade Pro</span>
+                    <span>⚡ 升级专业版</span>
                 </button>
             </div>
         </header>
 
         <!-- Hero / Search -->
         <div style="text-align: center; margin-bottom: 3rem;">
-            <h1>AI Brand Presence Audit</h1>
-            <p>See how Large Language Models perceive your brand in real-time.</p>
+            <h1>AI 品牌影响力审计</h1>
+            <p>实时洞察大语言模型(LLM)眼中的品牌形象。</p>
             
             <div class="input-group" style="max-width: 600px; margin: 2rem auto;">
-                <input id="brandInput" type="text" placeholder="Enter brand name (e.g., Tesla, Nike, 蔚来)...">
-                <button onclick="runAudit()" class="btn btn-primary">Start Audit</button>
+                <input id="brandInput" type="text" placeholder="输入品牌名称 (例如: 蔚来汽车, 瑞幸咖啡)...">
+                <button onclick="runAudit()" class="btn btn-primary">开始审计</button>
             </div>
         </div>
 
@@ -295,26 +295,26 @@
             <!-- Key Metrics -->
             <div class="grid-3">
                 <div class="card score-display">
-                    <h3>GEO Score</h3>
+                    <h3>GEO 综合得分</h3>
                     <div id="scoreValue" class="score-value">0</div>
-                    <p>Visibility Index</p>
+                    <p>品牌可见度指数</p>
                 </div>
                 <div class="card score-display">
-                    <h3>Market Grade</h3>
+                    <h3>市场评级</h3>
                     <div id="marketGrade" class="grade-value">-</div>
-                    <p>Relative Standing</p>
+                    <p>行业相对地位</p>
                 </div>
                 <div class="card score-display">
-                    <h3>Sentiment</h3>
-                    <div class="grade-value" style="color: var(--success-color);">Positive</div>
-                    <p>AI Perception</p>
+                    <h3>情感倾向</h3>
+                    <div class="grade-value" style="color: var(--success-color);">正面 (Positive)</div>
+                    <p>AI 认知态度</p>
                 </div>
             </div>
 
             <div class="grid-3" style="grid-template-columns: 2fr 1fr;">
                 <!-- Chart -->
                 <div class="card">
-                    <h3>Model Visibility Breakdown</h3>
+                    <h3>大模型覆盖率分析</h3>
                     <div style="height: 300px; width: 100%;">
                         <canvas id="geoChart"></canvas>
                     </div>
@@ -322,7 +322,7 @@
 
                 <!-- Suggestions -->
                 <div class="card" style="border-top: 4px solid var(--warning-color);">
-                    <h3>Optimization Tactics</h3>
+                    <h3>优化策略建议</h3>
                     <ul id="suggestionList" class="suggestion-list">
                         <!-- Items injected here -->
                     </ul>
@@ -332,14 +332,14 @@
 
         <!-- History -->
         <div class="card">
-            <h3>Recent Audits</h3>
+            <h3>最近审计记录</h3>
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th>Brand</th>
-                            <th>GEO Score</th>
-                            <th>Date</th>
+                            <th>品牌</th>
+                            <th>GEO 得分</th>
+                            <th>时间</th>
                         </tr>
                     </thead>
                     <tbody id="historyTable">
@@ -351,7 +351,7 @@
     </div>
 
     <footer>
-        &copy; 2025 GEO System Inc. | Enterprise AI Analytics | v4.0.1 (Gemini Dark Theme)
+        &copy; 2025 GEO System Inc. | 企业级 AI 分析平台 | v4.1.0 (CN)
     </footer>
 
     <script>
@@ -362,7 +362,7 @@
         async function upgradePro() {
             const btn = document.querySelector('.btn-pro');
             const originalContent = btn.innerHTML;
-            btn.innerHTML = "<span>Connecting...</span>";
+            btn.innerHTML = "<span>连接中...</span>";
             
             try {
                 const res = await fetch('/api/create-checkout-session', { method: 'POST' });
@@ -371,10 +371,10 @@
                 if (res.ok && data.url) {
                     window.location.href = data.url;
                 } else {
-                    alert("System Notice: Please configure STRIPE_API_KEY in Render dashboard.");
+                    alert("系统提示: 请在 Render 后台配置 STRIPE_API_KEY。");
                 }
             } catch (e) {
-                alert("Connection failed. Please try again.");
+                alert("连接失败，请稍后重试。");
             } finally {
                 btn.innerHTML = originalContent;
             }
@@ -393,7 +393,7 @@
                                 ${log.geo_score}
                             </span>
                         </td>
-                        <td style="color: var(--text-secondary);">${new Date(log.created_at).toLocaleString()}</td>
+                        <td style="color: var(--text-secondary);">${new Date(log.created_at).toLocaleString('zh-CN')}</td>
                     </tr>
                 `).join('');
             } catch (e) {
@@ -403,11 +403,11 @@
 
         async function runAudit() {
             const brand = document.getElementById('brandInput').value;
-            if (!brand) return alert("Please enter a brand name.");
+            if (!brand) return alert("请输入品牌名称。");
 
             const btn = document.querySelector('.btn-primary');
             const originalText = btn.innerText;
-            btn.innerText = "Analyzing...";
+            btn.innerText = "分析中...";
             btn.disabled = true;
 
             try {
@@ -417,7 +417,7 @@
                 renderReport(data);
                 loadHistory(); 
             } catch (e) {
-                alert("Server connection failed. Please ensure the backend is running.");
+                alert("服务器连接失败，请确保后端正在运行。");
             } finally {
                 btn.innerText = originalText;
                 btn.disabled = false;
@@ -430,10 +430,10 @@
             // Status Update
             const statusEl = document.getElementById('systemStatus');
             if (data.data_source.includes("Real")) {
-                statusEl.innerHTML = `<span class="status-dot active"></span><span>Mode: Real-Time</span>`;
+                statusEl.innerHTML = `<span class="status-dot active"></span><span>模式: 实时分析</span>`;
                 statusEl.style.borderColor = "var(--success-color)";
             } else {
-                statusEl.innerHTML = `<span class="status-dot sim"></span><span>Mode: Simulation</span>`;
+                statusEl.innerHTML = `<span class="status-dot sim"></span><span>模式: 模拟演示</span>`;
             }
 
             // Metrics
@@ -461,7 +461,7 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Visibility Score',
+                        label: '可见度得分',
                         data: scores,
                         backgroundColor: '#448aff',
                         borderRadius: 4,
