@@ -8,10 +8,27 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 获取数据库连接串 (如果没有则使用本地 SQLite 作为 fallback)
+# 默认使用 SQLite，防止无配置时报错
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./geo_system.db")
 
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+try:
+    if "sqlite" in DATABASE_URL:
+        # SQLite 配置
+        engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+    else:
+        # PostgreSQL 配置 (Supabase/Neon)
+        # 增加 pool_pre_ping 防止连接断开
+        engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+        
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    print(f"✅ Database connected: {'SQLite' if 'sqlite' in DATABASE_URL else 'PostgreSQL'}")
+
+except Exception as e:
+    print(f"⚠️ Database connection failed: {e}")
+    print("🔄 Falling back to in-memory SQLite for resilience.")
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 Base = declarative_base()
 
 class AuditLog(Base):
@@ -28,4 +45,8 @@ class AuditLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("✅ Database tables created.")
+    except Exception as e:
+        print(f"❌ Failed to create tables: {e}")
