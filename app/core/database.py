@@ -20,13 +20,18 @@ try:
         # 增加 pool_pre_ping 防止连接断开
         engine = create_engine(DATABASE_URL, pool_pre_ping=True)
         
+        # 🟢 CRITICAL: Test connection immediately to trigger fallback if failed
+        with engine.connect() as connection:
+            pass
+        
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     print(f"✅ Database connected: {'SQLite' if 'sqlite' in DATABASE_URL else 'PostgreSQL'}")
 
 except Exception as e:
     print(f"⚠️ Database connection failed: {e}")
     print("🔄 Falling back to in-memory SQLite for resilience.")
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    # Fallback to local file db so data persists slightly better than memory, or just memory
+    engine = create_engine("sqlite:///./fallback.db", connect_args={"check_same_thread": False})
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

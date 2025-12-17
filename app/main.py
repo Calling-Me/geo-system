@@ -6,8 +6,25 @@ from app.core.database import SessionLocal, AuditLog, init_db
 from sqlalchemy.orm import Session
 import uvicorn
 import os
+import stripe
+from fastapi.responses import Response
 
 app = FastAPI(title="GEO System API", version="1.0.0")
+
+# Load Stripe Key
+STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
+stripe.api_key = STRIPE_API_KEY
+
+# Cache Control Middleware
+@app.middleware("http")
+async def add_no_cache_header(request, call_next):
+    response = await call_next(request)
+    # Prevent caching for HTML and JSON to ensure users see updates
+    if request.url.path == "/" or request.url.path.endswith(".html") or request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 # 启动时初始化数据库
 @app.on_event("startup")
