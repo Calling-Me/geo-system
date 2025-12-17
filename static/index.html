@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEO System | AI 时代的流量主宰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .neon-text { text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-8">
+
+    <!-- Header -->
+    <header class="w-full max-w-6xl flex justify-between items-center mb-12">
+        <div class="text-3xl font-bold tracking-tighter text-sky-400 neon-text">GEO SYSTEM</div>
+        <div class="flex gap-4 text-sm text-slate-400">
+            <span>Status: <span class="text-green-400">ONLINE</span></span>
+            <span>Target: <span class="text-yellow-400">¥100,000,000</span></span>
+        </div>
+    </header>
+
+    <!-- Main Input Section -->
+    <main class="w-full max-w-4xl space-y-8">
+        <div class="text-center space-y-4">
+            <h1 class="text-5xl font-extrabold text-white">AI 知道你的品牌吗？</h1>
+            <p class="text-xl text-slate-400">输入品牌名称，一键生成全网大模型 (LLM) 存在感审计报告。</p>
+        </div>
+
+        <div class="glass p-8 rounded-2xl shadow-2xl flex gap-4">
+            <input id="brandInput" type="text" placeholder="输入品牌名称 (例如: 蔚来汽车, 瑞幸咖啡...)" 
+                   class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-6 py-4 text-lg text-white focus:outline-none focus:border-sky-500 transition">
+            <button onclick="runAudit()" 
+                    class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-4 px-8 rounded-lg text-lg transition shadow-[0_0_20px_rgba(14,165,233,0.5)]">
+                开始审计
+            </button>
+        </div>
+
+        <!-- Results Section (Hidden initially) -->
+        <div id="resultsArea" class="hidden space-y-6">
+            <!-- Score Card -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass p-6 rounded-xl text-center">
+                    <div class="text-slate-400 mb-2">GEO 总分</div>
+                    <div id="scoreValue" class="text-6xl font-black text-sky-400">0</div>
+                </div>
+                <div class="glass p-6 rounded-xl text-center">
+                    <div class="text-slate-400 mb-2">市场评级</div>
+                    <div id="marketGrade" class="text-2xl font-bold text-white mt-4">-</div>
+                </div>
+                <div class="glass p-6 rounded-xl text-center">
+                    <div class="text-slate-400 mb-2">AI 情感倾向</div>
+                    <div class="text-2xl font-bold text-green-400 mt-4">Positive</div>
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <div class="glass p-6 rounded-xl">
+                <canvas id="geoChart"></canvas>
+            </div>
+
+            <!-- Suggestions -->
+            <div class="glass p-6 rounded-xl border-l-4 border-yellow-500">
+                <h3 class="text-xl font-bold text-white mb-4">优化建议 (VIP)</h3>
+                <ul id="suggestionList" class="space-y-2 text-slate-300 list-disc pl-5">
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        async function runAudit() {
+            const brand = document.getElementById('brandInput').value;
+            if (!brand) return alert("请输入品牌名称！");
+
+            // UI Loading state
+            const btn = document.querySelector('button');
+            btn.innerText = "分析中...";
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`/api/analyze?brand=${brand}`);
+                const data = await response.json();
+                
+                renderReport(data);
+            } catch (e) {
+                alert("系统连接失败，请确保后端已启动。");
+                console.error(e);
+            } finally {
+                btn.innerText = "开始审计";
+                btn.disabled = false;
+            }
+        }
+
+        function renderReport(data) {
+            document.getElementById('resultsArea').classList.remove('hidden');
+            
+            // Update Text
+            document.getElementById('scoreValue').innerText = data.geo_score;
+            document.getElementById('marketGrade').innerText = data.market_grade;
+            
+            // Update List
+            const list = document.getElementById('suggestionList');
+            list.innerHTML = "";
+            data.suggestions.forEach(s => {
+                const li = document.createElement('li');
+                li.innerText = s;
+                list.appendChild(li);
+            });
+
+            // Update Chart
+            const ctx = document.getElementById('geoChart').getContext('2d');
+            
+            // Destroy old chart if exists
+            if (window.myChart) window.myChart.destroy();
+
+            const labels = Object.keys(data.model_breakdown);
+            const scores = labels.map(k => data.model_breakdown[k].visibility_score);
+
+            window.myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'AI 提及可见度 (Visibility Score)',
+                        data: scores,
+                        backgroundColor: 'rgba(56, 189, 248, 0.6)',
+                        borderColor: 'rgba(56, 189, 248, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    },
+                    plugins: {
+                        legend: { labels: { color: 'white' } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
