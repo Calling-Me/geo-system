@@ -18,9 +18,14 @@
     <!-- Header -->
     <header class="w-full max-w-6xl flex justify-between items-center mb-12">
         <div class="text-3xl font-bold tracking-tighter text-sky-400 neon-text">GEO SYSTEM</div>
-        <div class="flex gap-4 text-sm text-slate-400">
-            <span>Status: <span class="text-green-400">ONLINE</span></span>
-            <span>Target: <span class="text-yellow-400">¥100,000,000</span></span>
+        <div class="flex gap-4 text-sm text-slate-400 items-center">
+            <span id="systemStatus" class="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                Mode: Simulation
+            </span>
+            <button onclick="upgradePro()" class="bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold px-4 py-1 rounded-full hover:scale-105 transition shadow-lg shadow-orange-500/20">
+                🚀 Upgrade Pro
+            </button>
         </div>
     </header>
 
@@ -94,26 +99,6 @@
     <script>
         // Load history on start
         window.onload = loadHistory;
-
-        async function upgradePro() {
-            const btn = document.querySelector('button[onclick="upgradePro()"]');
-            btn.innerText = "Connecting Stripe...";
-            
-            try {
-                const res = await fetch('/api/create-checkout-session', { method: 'POST' });
-                const data = await res.json();
-                
-                if (res.ok && data.url) {
-                    window.location.href = data.url;
-                } else {
-                    alert("支付系统暂未配置 (Missing API Key)。\n请在 Render 后台添加 STRIPE_API_KEY 环境变量。");
-                }
-            } catch (e) {
-                alert("支付跳转失败，请稍后重试。");
-            } finally {
-                btn.innerText = "🚀 Upgrade Pro";
-            }
-        }
 
         async function loadHistory() {
             try {
