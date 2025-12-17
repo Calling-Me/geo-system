@@ -8,19 +8,26 @@ import json
 
 class GEOEngine:
     """
-    GEO (Generative Engine Optimization) 核心分析引擎 v2.0
+    GEO (Generative Engine Optimization) 核心分析引擎 v2.1 (CN-Edition)
     
     Features:
     - Dual Mode: 自动检测 API Key，有 Key 则真搜，无 Key 则模拟。
-    - Sentiment Analysis: 真实的情感分析。
+    - CN Localization: 针对中文互联网环境优化，覆盖 DeepSeek, Kimi, 文心等国产模型。
     """
     
     def __init__(self):
         self.tavily_api_key = os.getenv("TAVILY_API_KEY")
+        # 针对不同模型的权重配置 (模拟不同模型的偏好)
+        # Authority: 权威性 (百科, 官媒)
+        # Recency: 时效性 (新闻, 社交媒体)
         self.models = {
+            "DeepSeek (深度求索)": {"weight_authority": 0.85, "weight_recency": 0.8},
+            "Kimi (月之暗面)": {"weight_authority": 0.7, "weight_recency": 1.0}, # Kimi 擅长长文本和最新资料
+            "文心一言 (Ernie)": {"weight_authority": 0.9, "weight_recency": 0.6}, # 百度系偏重权威
+            "豆包 (Doubao)": {"weight_authority": 0.6, "weight_recency": 0.9}, # 字节系偏重社媒/短视频内容
+            "智谱清言 (ChatGLM)": {"weight_authority": 0.8, "weight_recency": 0.7},
+            "腾讯元宝 (Hunyuan)": {"weight_authority": 0.85, "weight_recency": 0.85}, # 腾讯系生态均衡
             "ChatGPT-4o": {"weight_authority": 0.8, "weight_recency": 0.9},
-            "Claude 3.5": {"weight_authority": 0.9, "weight_recency": 0.7},
-            "Perplexity": {"weight_authority": 0.6, "weight_recency": 1.0},
         }
         
     def analyze_brand(self, brand_name: str, industry: str) -> Dict:
@@ -55,7 +62,7 @@ class GEOEngine:
             "geo_score": avg_score,
             "market_grade": self._get_grade(avg_score),
             "web_signals_found": web_signals['count'],
-            "data_source": "Real-Time Web" if self.tavily_api_key else "Simulation (No API Key)",
+            "data_source": "实时全网搜索 (Tavily)" if self.tavily_api_key else "模拟演示模式 (未配置 API)",
             "model_breakdown": results,
             "suggestions": self._generate_suggestions(avg_score, web_signals),
             "top_citations": web_signals.get('sources', [])[:3]
@@ -63,16 +70,17 @@ class GEOEngine:
 
     def _fetch_real_signals(self, brand: str) -> Dict:
         """
-        接入 Tavily API 进行真实搜索
+        接入 Tavily API 进行真实搜索 (CN Optimized)
         """
         try:
             url = "https://api.tavily.com/search"
+            # 针对中文语境优化搜索词
             payload = {
                 "api_key": self.tavily_api_key,
-                "query": f"What is {brand} brand reputation review",
+                "query": f"{brand} 品牌评价 用户反馈 优缺点",
                 "search_depth": "basic",
                 "include_answer": False,
-                "include_domains": []
+                "include_domains": [] # 可以指定抓取 zhihu.com, weibo.com 等
             }
             headers = {'Content-Type': 'application/json'}
             response = requests.post(url, json=payload, headers=headers, timeout=10)
@@ -92,20 +100,25 @@ class GEOEngine:
 
     def _fetch_mock_signals(self, brand: str) -> Dict:
         """
-        模拟数据生成器 (Fallback)
+        模拟数据生成器 (Fallback - CN)
         """
-        base_signal_count = len(brand) * 5 + random.randint(10, 50)
-        if "Tesla" in brand or "Apple" in brand:
+        # 简单的模拟逻辑
+        base_signal_count = len(brand) * 5 + random.randint(20, 60)
+        
+        # 知名品牌加权
+        famous_brands = ["华为", "比亚迪", "瑞幸", "DeepSeek", "小米", "Tesla", "Apple"]
+        if any(b in brand for b in famous_brands):
             base_signal_count += 80
             
         return {
             "count": base_signal_count,
             "snippets": [
-                f"{brand} is a leading player in the industry.",
-                f"Users are discussing {brand} features on Reddit.",
-                f"Comparison: {brand} vs Competitors."
+                f"{brand} 是行业内的领军品牌，技术实力强劲。",
+                f"用户在知乎和微博上对 {brand} 的讨论非常热烈。",
+                f"最新的测评显示 {brand} 在性价比方面优于竞品。",
+                f"部分用户反馈 {brand} 的售后服务有待提升。"
             ],
-            "sources": ["wikipedia.org", "reddit.com", "techcrunch.com"]
+            "sources": ["zhihu.com", "weibo.com", "36kr.com"]
         }
 
     def _calculate_visibility(self, signals: Dict, weights: Dict) -> int:
@@ -114,14 +127,19 @@ class GEOEngine:
         return int(min(adjusted_score + random.randint(-5, 10), 100))
 
     def _analyze_sentiment(self, snippets: List[str]) -> str:
-        if not snippets: return "Neutral"
+        if not snippets: return "中立 (Neutral)"
+        # 简单的关键词匹配 (中文环境 TextBlob 支持较弱，MVP阶段用关键词替代)
         combined_text = " ".join(snippets)
-        analysis = TextBlob(combined_text)
-        polarity = analysis.sentiment.polarity
         
-        if polarity > 0.1: return "Positive"
-        if polarity < -0.1: return "Negative"
-        return "Neutral"
+        positive_keywords = ["领先", "优秀", "好评", "强劲", "优势", "第一", "positive", "good"]
+        negative_keywords = ["差评", "投诉", "落后", "缺点", "问题", "糟糕", "negative", "bad"]
+        
+        pos_score = sum(1 for k in positive_keywords if k in combined_text)
+        neg_score = sum(1 for k in negative_keywords if k in combined_text)
+        
+        if pos_score > neg_score: return "正面 (Positive)"
+        if neg_score > pos_score: return "负面 (Negative)"
+        return "中立 (Neutral)"
 
     def _estimate_ranking(self, score: int) -> int:
         if score > 90: return 1
@@ -129,18 +147,20 @@ class GEOEngine:
         return random.randint(6, 20)
 
     def _get_grade(self, score: int) -> str:
-        if score >= 80: return "Dominant (统治级)"
-        if score >= 60: return "Competitive (竞争级)"
-        return "Invisible (隐形状态)"
+        if score >= 85: return "统治级 (Dominant)"
+        if score >= 65: return "竞争级 (Competitive)"
+        return "隐形状态 (Invisible)"
 
     def _generate_suggestions(self, score: int, signals: Dict) -> List[str]:
         suggestions = []
         if score < 50:
-            suggestions.append("🚨 你的品牌在 AI 语料库中几乎不存在")
+            suggestions.append("🚨 警告：DeepSeek 和文心一言几乎不认识你的品牌")
+            suggestions.append("👉 建议：立即在百度百科和知乎建立品牌词条")
         if signals['count'] < 30:
-            suggestions.append("📉 外部引用源太少，LLM 认为你不可信")
+            suggestions.append("📉 信号不足：Kimi 找不到足够的参考资料来回答用户提问")
         if score >= 80:
-            suggestions.append("🌟 维持现状，关注竞品动向")
+            suggestions.append("🌟 表现优异：继续保持在垂直媒体（如 36Kr/虎嗅）的曝光")
             
-        suggestions.append(f"💡 针对 {random.choice(list(self.models.keys()))} 优化你的 'About Us' 页面")
+        target_model = random.choice(list(self.models.keys()))
+        suggestions.append(f"💡 策略：针对 {target_model} 优化你的官网 '关于我们' 页面结构")
         return suggestions
